@@ -92,5 +92,5 @@ kvpair_t *kvlist_iterator_next(kvlist_iterator_t *it);
  */
 void kvlist_iterator_free(kvlist_iterator_t **it);
 
-const char* kvlist_get_first_key(kvlist_t *list);
-kvpair_t* kvlist_get_last_kv(kvlist_t *list);
+const char *kvlist_get_first_key(kvlist_t *list);
+kvpair_t *kvlist_get_last_kv(kvlist_t *list);

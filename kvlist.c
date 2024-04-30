@@ -216,12 +216,12 @@ void kvlist_iterator_free(kvlist_iterator_t **iter) {
   *iter = NULL;
 }
 
-const char* kvlist_get_first_key(kvlist_t *list) {
-    if (list->head == NULL) return NULL;
-    return list->head->kv->key;
+const char *kvlist_get_first_key(kvlist_t *list) {
+  if (list->head == NULL) return NULL;
+  return list->head->kv->key;
 }
 
-kvpair_t* kvlist_get_last_kv(kvlist_t *list) {
-    if (list->tail == NULL) return NULL;
-    return list->tail->kv;
+kvpair_t *kvlist_get_last_kv(kvlist_t *list) {
+  if (list->tail == NULL) return NULL;
+  return list->tail->kv;
 }
