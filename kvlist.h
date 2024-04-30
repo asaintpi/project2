@@ -12,7 +12,7 @@ typedef struct kvpair_t {
  * `kvpair_new` creates a new `kvpair_t` by copying the provided `key` and
  * `value`.
  */
-kvpair_t *kvpair_new(char *key, char *value);
+kvpair_t *kvpair_new(const char *key, const char *value);
 
 /**
  * `kvpair_clone` creates a copy of `kv`.

@@ -4,6 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+void load_input_from_file(kvlist_t *input, const char *filename);
+void init_hash_table(void);
+void map_reduce(mapper_t mapper, size_t num_mapper, reducer_t reducer, size_t num_reducer, kvlist_t* input, kvlist_t* output);
+void execute_reduce_phase(kvlist_t *output);
+void print_kvlist(kvlist_t *list);
+void cleanup(void);
+
 // Simple mapper function: maps each word to "1"
 void simple_mapper(kvpair_t *kv, kvlist_t *output) {
     char *token, *saveptr;
@@ -21,9 +28,9 @@ void simple_mapper(kvpair_t *kv, kvlist_t *output) {
 void print_kvlist(kvlist_t *list) {
     kvlist_iterator_t *it = kvlist_iterator_new(list);
     kvpair_t *pair;
-    printf("Output from map_reduce:\n");
+    //printf("Output from map_reduce:\n");
     while ((pair = kvlist_iterator_next(it)) != NULL) {
-        printf("%s: %s\n", pair->key, pair->value);
+        printf("%s,%s\n", pair->key, pair->value);
     }
     kvlist_iterator_free(&it);
 }
@@ -31,28 +38,64 @@ void print_kvlist(kvlist_t *list) {
 // Function to create a predefined input list for testing
 kvlist_t *create_test_input() {
     kvlist_t *input = kvlist_new();
-    kvlist_append(input, kvpair_new("file1", "hello world hello"));
+    kvlist_append(input, kvpair_new("file1", "Hello world, hello again! Is this the real world, or is it just fantasy Caught in a landslide, no escape from reality."));
     kvlist_append(input, kvpair_new("file2", "hello mapreduce mapreduce"));
     return input;
 }
 
+void load_input_from_file(kvlist_t *input, const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        fprintf(stderr, "Error opening file: %s\n", filename);
+        exit(EXIT_FAILURE);
+    }
+
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+
+    while ((read = getline(&line, &len, file)) != -1) {
+        // Strip newline character, if present
+        if (line[read - 1] == '\n') {
+            line[read - 1] = '\0';
+        }
+        kvlist_append(input, kvpair_new(filename, strdup(line)));
+    }
+
+    free(line);
+    fclose(file);
+}
+
 // Main function to set up and run tests
-int main() {
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <file1> [file2] ... [fileN]\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
     // Create input and output lists
-    kvlist_t *input = create_test_input();
+    kvlist_t *input = kvlist_new();
     kvlist_t *output = kvlist_new();
 
-    // Call the map_reduce function
-    init_hash_table();  // Initialize hash table
+    // Load each file specified on the command line into the input list
+    for (int i = 1; i < argc; i++) {
+        load_input_from_file(input, argv[i]);
+    }
 
-    map_reduce(simple_mapper, 2, NULL, 0, input, output); // Reducer is NULL for now
-    print_hash_table(); // Print results from hash table
+    // Initialize the hash table for use in the map phase
+    init_hash_table();
 
-    // Print output to verify correct mapping
+    // Execute the MapReduce process
+    map_reduce(simple_mapper, argc - 1, NULL, 0, input, output);
+    execute_reduce_phase(output);
+
+    // Output the results to verify correct mapping and reducing
     print_kvlist(output);
 
-    // Cleanup
+    // Cleanup resources
+    cleanup();
     kvlist_free(&input);
     kvlist_free(&output);
+
     return 0;
 }

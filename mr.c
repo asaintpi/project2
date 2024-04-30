@@ -100,7 +100,7 @@ void *mapper_function(void *args) {
     // Iterate over assigned segment
     while ((pair = kvlist_iterator_next(iter)) != NULL && index < mapperArgs->end) {
         if (index >= mapperArgs->start) {
-            printf("Thread processing key: %s, value: %s\n", pair->key, pair->value);
+            //printf("Thread processing key: %s, value: %s\n", pair->key, pair->value);
 
             mapperArgs->mapper(pair, mapperArgs->output);
         }
@@ -147,6 +147,25 @@ void map_reduce(mapper_t mapper, size_t num_mapper, reducer_t reducer,
     free(threads);
     free(mapperArgs);
     pthread_mutex_destroy(&output_mutex); // Destroy mutex
+}
+
+// This function assumes count_data struct holds an integer count.
+void reducer(char *key, count_data *data, kvlist_t *output) {
+    char count_string[20];
+    sprintf(count_string, "%d", data->count);  // Convert integer count to string
+    kvpair_t *new_pair = kvpair_new(key, count_string);
+    kvlist_append(output, new_pair);  // Append to output list
+}
+
+void execute_reduce_phase(kvlist_t *output) {
+    // Iterate over all keys stored in the keys array
+    for (int i = 0; i < num_keys; i++) {
+        ENTRY item = { .key = keys[i], .data = NULL };
+        ENTRY *found_item;
+        if (hsearch_r(item, FIND, &found_item, &ht_tab)) {
+            reducer(found_item->key, (count_data *)found_item->data, output);
+        }
+    }
 }
 
 // Utility function to count items in a kvlist

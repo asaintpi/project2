@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-kvpair_t *kvpair_new(char *key, char *value) {
+kvpair_t *kvpair_new(const char *key, const char *value) {
   kvpair_t *pair = (kvpair_t *)malloc(sizeof(kvpair_t));
   pair->key = (char *)malloc(strlen(key) + 1);
   strcpy(pair->key, key);
