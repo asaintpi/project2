@@ -43,6 +43,7 @@ void mapper(kvpair_t *pair, kvlist_t *output) {
   kvlist_append(output, kvpair_new(toLowerStr(token), "1"));
   while ((token = strtok_r(NULL, delim, &saveptr)) != NULL) {
     kvlist_append(output, kvpair_new(toLowerStr(token), "1"));
+   // printf("Mapped: %s -> 1\n", toLowerStr(token));
   }
 }
 
@@ -57,23 +58,40 @@ void mapper(kvpair_t *pair, kvlist_t *output) {
  */
 void reducer(char *key, kvlist_t *lst, kvlist_t *output) {
   int sum = 0;
+  char *last_key = NULL;
 
-  // iterate through lst
   kvlist_iterator_t *itor = kvlist_iterator_new(lst);
-  for (;;) {
-    kvpair_t *pair = kvlist_iterator_next(itor);
-    if (pair == NULL) {
-      break;
-    }
-    // turn the value into an integer and increment the sum
-    sum += atoi(pair->value);
-  }
-  kvlist_iterator_free(&itor);
+  kvpair_t *pair;
+  printf("Reducer started for key: %s\n", key); // Log when reducer starts processing a new key
 
-  // turn `sum` back to a string and add to output
-  char sum_string[32];
-  sprintf(sum_string, "%d", sum);
-  kvlist_append(output, kvpair_new(key, sum_string));
+  while ((pair = kvlist_iterator_next(itor)) != NULL) {
+    printf("Reducer processing: %s with value: %s\n", pair->key, pair->value); // Detailed logging per pair
+    if (last_key == NULL || strcmp(last_key, pair->key) == 0) {
+      // Same key as before, continue summing
+      sum += atoi(pair->value);
+      last_key = pair->key; // Important to set last_key here for the first pair
+    } else {
+      // New key, first process the old key
+      char sum_string[32];
+      sprintf(sum_string, "%d", sum);
+      kvlist_append(output, kvpair_new(last_key, sum_string));
+      printf("Outputting sum for key: %s -> %s\n", last_key, sum_string); // Log output
+
+      // Start summing for the new key
+      last_key = pair->key;
+      sum = atoi(pair->value);
+    }
+  }
+
+  // Handle the last key after finishing the loop
+  if (last_key != NULL) {
+    char sum_string[32];
+    sprintf(sum_string, "%d", sum);
+    kvlist_append(output, kvpair_new(last_key, sum_string));
+    printf("Final outputting sum for key: %s -> %s\n", last_key, sum_string); // Log final output
+  }
+
+  kvlist_iterator_free(&itor);
 }
 
 int main(int argc, char **argv) {
@@ -91,7 +109,9 @@ int main(int argc, char **argv) {
 
   // input is a list of words
   kvlist_t *input = kvlist_new();
-
+  // After reading the file lines into the input list
+  kvlist_iterator_t *input_iter = kvlist_iterator_new(input);
+ 
   // for each file
   for (int i = 3; i < argc; i++) {
     char *filename = argv[i];
@@ -116,6 +136,16 @@ int main(int argc, char **argv) {
     }
     line = NULL;
   }
+
+  // create output list
+
+  // call map_reduce
+  // Debug: Print input data after it's been read
+  kvpair_t *input_pair;
+  while ((input_pair = kvlist_iterator_next(input_iter)) != NULL) {
+    printf("File: %s, Line: %s\n", input_pair->key, input_pair->value);
+  }
+  kvlist_iterator_free(&input_iter);
 
   // create output list
   kvlist_t *output = kvlist_new();

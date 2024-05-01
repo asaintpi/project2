@@ -14,34 +14,32 @@ void print_kvlist(kvlist_t *list);
 void cleanup(void);
 
 void simple_mapper(kvpair_t *kv, kvlist_t *output) {
-    char *line = strdup(kv->value);  
-    if (!line) return;  
+  char *line = strdup(kv->value);
+  if (!line) return;
 
-    char *token, *saveptr = NULL;
+  char *token, *saveptr = NULL;
 
-    for (token = strtok_r(line, " ", &saveptr); token != NULL; 
-         token = strtok_r(NULL, " ", &saveptr)) {
-        add_to_hash_table(token);  
-    }
+  for (token = strtok_r(line, " ", &saveptr); token != NULL;
+       token = strtok_r(NULL, " ", &saveptr)) {
+    add_to_hash_table(token);
+  }
 
-    free(line); 
+  free(line);
 }
-
 
 void print_kvlist(kvlist_t *list) {
-    kvlist_iterator_t *iterator = kvlist_iterator_new(list);
-    kvpair_t *current_pair;
+  kvlist_iterator_t *iterator = kvlist_iterator_new(list);
+  kvpair_t *current_pair;
 
-    // printf("output:\n");
+  // printf("output:\n");
 
-    for (current_pair = kvlist_iterator_next(iterator); current_pair != NULL; 
-         current_pair = kvlist_iterator_next(iterator)) {
-        printf("%s,%s\n", current_pair->key, current_pair->value);
-    }
+  for (current_pair = kvlist_iterator_next(iterator); current_pair != NULL;
+       current_pair = kvlist_iterator_next(iterator)) {
+    printf("%s,%s\n", current_pair->key, current_pair->value);
+  }
 
-    kvlist_iterator_free(&iterator);
+  kvlist_iterator_free(&iterator);
 }
-
 
 // Function to create a predefined input list for testing
 // kvlist_t *create_test_input() {
@@ -57,27 +55,26 @@ void print_kvlist(kvlist_t *list) {
 // }
 
 void file_read(kvlist_t *input, const char *filename) {
-    FILE *file = fopen(filename, "r");
-    if (!file) {
-        perror("failed to open file");
-        exit(EXIT_FAILURE);
+  FILE *file = fopen(filename, "r");
+  if (!file) {
+    perror("failed to open file");
+    exit(EXIT_FAILURE);
+  }
+
+  char *current_line = NULL;
+  size_t line_capacity = 0;
+  ssize_t line_size;
+
+  while ((line_size = getline(&current_line, &line_capacity, file)) != -1) {
+    if (current_line[line_size - 1] == '\n') {
+      current_line[line_size - 1] = '\0';
     }
+    kvlist_append(input, kvpair_new(filename, strdup(current_line)));
+  }
 
-    char *current_line = NULL;
-    size_t line_capacity = 0;
-    ssize_t line_size;
-
-    while ((line_size = getline(&current_line, &line_capacity, file)) != -1) {
-        if (current_line[line_size - 1] == '\n') {
-            current_line[line_size - 1] = '\0';
-        }
-        kvlist_append(input, kvpair_new(filename, strdup(current_line)));
-    }
-
-    free(current_line);
-    fclose(file);
+  free(current_line);
+  fclose(file);
 }
-
 
 int main(int argc, char **argv) {
   if (argc < 2) {
