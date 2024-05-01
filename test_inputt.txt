@@ -1,0 +1,4 @@
+hello world hello mapreduce test mapreduce hello
+goodbye hello test mapreduce world goodbye world
+dog cat hello world hello mapreduce test mapreduce hello
+goodbye hello test mapreduce world goodbye world

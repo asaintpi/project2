@@ -5,102 +5,101 @@
 #include "kvlist.h"
 #include "mr.h"
 
-void load_input_from_file(kvlist_t *input, const char *filename);
+void file_read(kvlist_t *input, const char *filename);
 void init_hash_table(void);
 void map_reduce(mapper_t mapper, size_t num_mapper, reducer_t reducer,
                 size_t num_reducer, kvlist_t *input, kvlist_t *output);
-void execute_reduce_phase(kvlist_t *output);
+void reduc(kvlist_t *output);
 void print_kvlist(kvlist_t *list);
 void cleanup(void);
 
-// Simple mapper function: maps each word to "1"
 void simple_mapper(kvpair_t *kv, kvlist_t *output) {
-  char *token, *saveptr;
-  char *line =
-      strdup(kv->value);  // Make a copy of the value for safe tokenization
-  token = strtok_r(line, " ", &saveptr);
-  while (token) {
-    add_to_hash_table(token);  // Add each word to the hash table
-    token = strtok_r(NULL, " ", &saveptr);
-  }
-  free(line);  // Don't forget to free the duplicated line
+    char *line = strdup(kv->value);  
+    if (!line) return;  
+
+    char *token, *saveptr = NULL;
+
+    for (token = strtok_r(line, " ", &saveptr); token != NULL; 
+         token = strtok_r(NULL, " ", &saveptr)) {
+        add_to_hash_table(token);  
+    }
+
+    free(line); 
 }
 
-// Helper function to print kvlist contents for verification
+
 void print_kvlist(kvlist_t *list) {
-  kvlist_iterator_t *it = kvlist_iterator_new(list);
-  kvpair_t *pair;
-  // printf("Output from map_reduce:\n");
-  while ((pair = kvlist_iterator_next(it)) != NULL) {
-    printf("%s,%s\n", pair->key, pair->value);
-  }
-  kvlist_iterator_free(&it);
+    kvlist_iterator_t *iterator = kvlist_iterator_new(list);
+    kvpair_t *current_pair;
+
+    // printf("output:\n");
+
+    for (current_pair = kvlist_iterator_next(iterator); current_pair != NULL; 
+         current_pair = kvlist_iterator_next(iterator)) {
+        printf("%s,%s\n", current_pair->key, current_pair->value);
+    }
+
+    kvlist_iterator_free(&iterator);
 }
+
 
 // Function to create a predefined input list for testing
-kvlist_t *create_test_input() {
-  kvlist_t *input = kvlist_new();
-  kvlist_append(
-      input,
-      kvpair_new(
-          "file1",
-          "Hello world, hello again! Is this the real world, or is it just "
-          "fantasy Caught in a landslide, no escape from reality."));
-  kvlist_append(input, kvpair_new("file2", "hello mapreduce mapreduce"));
-  return input;
-}
+// kvlist_t *create_test_input() {
+//   kvlist_t *input = kvlist_new();
+//   kvlist_append(
+//       input,
+//       kvpair_new(
+//           "file1",
+//           "Hello world, hello again! Is this the real world, or is it just "
+//           "fantasy Caught in a landslide, no escape from reality."));
+//   kvlist_append(input, kvpair_new("file2", "hello mapreduce mapreduce"));
+//   return input;
+// }
 
-void load_input_from_file(kvlist_t *input, const char *filename) {
-  FILE *file = fopen(filename, "r");
-  if (!file) {
-    fprintf(stderr, "Error opening file: %s\n", filename);
-    exit(EXIT_FAILURE);
-  }
-
-  char *line = NULL;
-  size_t len = 0;
-  ssize_t read;
-
-  while ((read = getline(&line, &len, file)) != -1) {
-    // Strip newline character, if present
-    if (line[read - 1] == '\n') {
-      line[read - 1] = '\0';
+void file_read(kvlist_t *input, const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("failed to open file");
+        exit(EXIT_FAILURE);
     }
-    kvlist_append(input, kvpair_new(filename, strdup(line)));
-  }
 
-  free(line);
-  fclose(file);
+    char *current_line = NULL;
+    size_t line_capacity = 0;
+    ssize_t line_size;
+
+    while ((line_size = getline(&current_line, &line_capacity, file)) != -1) {
+        if (current_line[line_size - 1] == '\n') {
+            current_line[line_size - 1] = '\0';
+        }
+        kvlist_append(input, kvpair_new(filename, strdup(current_line)));
+    }
+
+    free(current_line);
+    fclose(file);
 }
 
-// Main function to set up and run tests
+
 int main(int argc, char **argv) {
   if (argc < 2) {
-    fprintf(stderr, "Usage: %s <file1> [file2] ... [fileN]\n", argv[0]);
+    fprintf(stderr, "usage: %s <file1> [file2] ... [fileN]\n", argv[0]);
     return EXIT_FAILURE;
   }
 
-  // Create input and output lists
   kvlist_t *input = kvlist_new();
   kvlist_t *output = kvlist_new();
 
-  // Load each file specified on the command line into the input list
   for (int i = 1; i < argc; i++) {
-    load_input_from_file(input, argv[i]);
+    file_read(input, argv[i]);
   }
 
-  // Initialize the hash table for use in the map phase
   init_hash_table();
 
-  // Execute the MapReduce process
   map_reduce(simple_mapper, argc - 1, NULL, 0, input, output);
-  execute_reduce_phase(output);
+  reduc(output);
 
-  // Output the results to verify correct mapping and reducing
   print_kvlist(output);
 
-  // Cleanup resources
-  cleanup();
+  free_keys();
   kvlist_free(&input);
   kvlist_free(&output);
 
